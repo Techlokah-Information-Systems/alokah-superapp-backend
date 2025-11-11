@@ -1,0 +1,331 @@
+// --------------------
+// Prisma configuration
+// --------------------
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --------------------
+// Enums
+// --------------------
+
+enum OrderStatusEnum {
+  Pending
+  Confirmed
+  Preparing
+  OutForDelivery
+  Delivered
+  Cancelled
+  Returned
+}
+
+enum PaymentStatusEnum {
+  Pending
+  Completed
+  Failed
+  Refunded
+  Cancelled
+}
+
+enum ItemTypeEnum {
+  Dairy
+  Vegetables
+  Fruits
+  Grains
+  Meat
+  Beverages
+  Snacks
+  Other
+}
+
+enum MetricsEnum {
+  Kg
+  Grams
+  Liters
+  Ml
+  Units
+  Pieces
+  Dozens
+}
+
+enum HotelTypeEnum {
+  Veg
+  NonVeg
+  MultiCuisine
+  OneStar
+  TwoStar
+  ThreeStar
+  FourStar
+  FiveStar
+}
+
+// --------------------
+// Core models
+// --------------------
+
+model User {
+  id               Int      @id @default(autoincrement())
+  username         String   @unique
+  email            String   @unique
+  phone            String   @unique
+  lastLoginAt      DateTime @default(now())
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  isActive         Boolean  @default(true)
+  isProUser        Boolean  @default(false)
+  subscriptionId   String?
+  isTrialActivated Boolean  @default(false)
+  isTrialOver      Boolean  @default(false)
+
+  // Relations
+  hotelsOwned   Hotel[]        @relation("HotelOwner")
+  carts         Cart[]
+  orders        Order[]
+  payments      Payment[]
+  subscriptions Subscription[]
+  employees     Employee[]
+}
+
+model HotelType {
+  id          Int           @id @default(autoincrement())
+  type        HotelTypeEnum @unique
+  description String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  hotels Hotel[]
+}
+
+model Contact {
+  id             Int      @id @default(autoincrement())
+  phone          String
+  alternatePhone String?
+  email          String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Back-relations (optional)
+  hotels    Hotel[]
+  employees Employee[]
+}
+
+model Hotel {
+  id          Int      @id @default(autoincrement())
+  hotelCode   String   @unique // previously: hotelId (string business id)
+  ownerId     Int
+  name        String
+  contactId   Int?
+  hotelTypeId Int
+  logo        String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  isActive    Boolean  @default(true)
+
+  // Relations
+  owner     User      @relation("HotelOwner", fields: [ownerId], references: [id])
+  contact   Contact?  @relation(fields: [contactId], references: [id])
+  hotelType HotelType @relation(fields: [hotelTypeId], references: [id])
+
+  // One-to-one Address: Address holds FK with unique constraint
+  address Address?
+
+  inventories    Inventory[]
+  inventoryItems InventoryItem[]
+  carts          Cart[]
+  orders         Order[]
+  payments       Payment[]
+  employees      Employee[]
+}
+
+model Address {
+  id         Int      @id @default(autoincrement())
+  hotelId    Int      @unique // enforce 1:1 (one address per hotel)
+  address    String
+  district   String
+  state      String
+  locality   String
+  country    String
+  postalCode String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  hotel Hotel @relation(fields: [hotelId], references: [id])
+}
+
+model Inventory {
+  id            Int      @id @default(autoincrement())
+  hotelId       Int
+  inventoryCode String   @unique // previously: inventoryId (business id)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  hotel Hotel @relation(fields: [hotelId], references: [id])
+
+  items InventoryItem[]
+}
+
+model InventoryItem {
+  id                Int          @id @default(autoincrement())
+  inventoryId       Int
+  hotelId           Int
+  price             Float
+  quantity          Float
+  itemName          String
+  stock             Float
+  minOrderQuantity  Float        @default(1)
+  minStockThreshold Float        @default(0)
+  metrics           MetricsEnum  @default(Kg)
+  shelfLifeDays     Int
+  isHotItem         Boolean      @default(false)
+  image             String?
+  isActive          Boolean      @default(true)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  itemType          ItemTypeEnum @default(Other)
+
+  inventory Inventory @relation(fields: [inventoryId], references: [id])
+  hotel     Hotel     @relation(fields: [hotelId], references: [id])
+
+  cartItems  CartItem[]
+  orderItems OrderItem[]
+}
+
+model Cart {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  hotelId   Int
+  cartCode  String   @unique // previously: cartId (business id)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User  @relation(fields: [userId], references: [id])
+  hotel Hotel @relation(fields: [hotelId], references: [id])
+
+  items  CartItem[]
+  orders Order[]
+}
+
+model CartItem {
+  id                Int      @id @default(autoincrement())
+  cartId            Int
+  inventoryItemId   Int
+  quantity          Float
+  addedByEmployeeId Int?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  cart            Cart          @relation(fields: [cartId], references: [id])
+  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id])
+  addedByEmployee Employee?     @relation("EmployeeToCartItems", fields: [addedByEmployeeId], references: [id])
+}
+
+model Order {
+  id            Int               @id @default(autoincrement())
+  orderCode     String            @unique // previously: orderId (business id)
+  hotelId       Int
+  userId        Int
+  cartId        Int?
+  totalItems    Int
+  orderStatus   OrderStatusEnum   @default(Pending)
+  amount        Float
+  discount      Float             @default(0)
+  tax           Float             @default(0)
+  couponCode    String?
+  totalAmount   Float
+  paymentStatus PaymentStatusEnum @default(Pending)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  user  User  @relation(fields: [userId], references: [id])
+  hotel Hotel @relation(fields: [hotelId], references: [id])
+  cart  Cart? @relation(fields: [cartId], references: [id])
+
+  items   OrderItem[]
+  payment Payment? // 1-1 via Payment.orderId @unique
+}
+
+model OrderItem {
+  id              Int      @id @default(autoincrement())
+  orderId         Int
+  inventoryItemId Int
+  quantity        Float
+  price           Float
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  order         Order         @relation(fields: [orderId], references: [id])
+  inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id])
+}
+
+model Payment {
+  id            Int               @id @default(autoincrement())
+  paymentCode   String            @unique // previously: paymentId (business id)
+  userId        Int
+  orderId       Int               @unique // enforces 1:1 Order↔Payment
+  hotelId       Int
+  amount        Float
+  tax           Float             @default(0)
+  discount      Float             @default(0)
+  totalAmount   Float
+  paymentMethod String
+  paymentStatus PaymentStatusEnum @default(Pending)
+  transactionId String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  user  User  @relation(fields: [userId], references: [id])
+  order Order @relation(fields: [orderId], references: [id])
+  hotel Hotel @relation(fields: [hotelId], references: [id])
+}
+
+model Subscription {
+  id               Int      @id @default(autoincrement())
+  subscriptionCode String   @unique // previously: subscriptionId (business id)
+  userId           Int
+  planName         String
+  amount           Float
+  tenure           Int // months, for example
+  startDate        DateTime
+  endDate          DateTime
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model Employee {
+  id           Int      @id @default(autoincrement())
+  employeeCode String   @unique // previously: employeeId (business id)
+  hotelId      Int
+  userId       Int
+  role         String
+  isActive     Boolean  @default(true)
+  name         String
+  contactId    Int?
+  password     String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  hotel   Hotel    @relation(fields: [hotelId], references: [id])
+  contact Contact? @relation(fields: [contactId], references: [id])
+  user    User     @relation(fields: [userId], references: [id])
+
+  cartItemsAdded CartItem[] @relation("EmployeeToCartItems")
+}
+
+// Optional lookup table if you still want it; not used by FKs.
+model Metrics {
+  id          Int         @id @default(autoincrement())
+  metric      MetricsEnum @unique
+  description String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
