@@ -45,6 +45,13 @@ enum ItemTypeEnum {
   Other
 }
 
+enum RolesEnum {
+  Owner
+  Admin
+  Manager
+  Employee
+}
+
 enum MetricsEnum {
   Kg
   Grams
@@ -71,7 +78,7 @@ enum HotelTypeEnum {
 // --------------------
 
 model User {
-  id               Int      @id @default(autoincrement())
+  id               String   @id @default(cuid())
   username         String   @unique
   email            String   @unique
   phone            String   @unique
@@ -91,10 +98,12 @@ model User {
   payments      Payment[]
   subscriptions Subscription[]
   employees     Employee[]
+
+  cartItemsAdded CartItem[] @relation("UserToCartItems")
 }
 
 model HotelType {
-  id          Int           @id @default(autoincrement())
+  id          String        @id @default(cuid())
   type        HotelTypeEnum @unique
   description String?
   createdAt   DateTime      @default(now())
@@ -104,7 +113,7 @@ model HotelType {
 }
 
 model Contact {
-  id             Int      @id @default(autoincrement())
+  id             String   @id @default(cuid())
   phone          String
   alternatePhone String?
   email          String
@@ -117,12 +126,12 @@ model Contact {
 }
 
 model Hotel {
-  id          Int      @id @default(autoincrement())
+  id          String   @id @default(cuid())
   hotelCode   String   @unique // previously: hotelId (string business id)
-  ownerId     Int
+  ownerId     String
   name        String
-  contactId   Int?
-  hotelTypeId Int
+  contactId   String?
+  hotelTypeId String
   logo        String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -142,11 +151,12 @@ model Hotel {
   orders         Order[]
   payments       Payment[]
   employees      Employee[]
+  alokahOrders   AlokahOrder[]
 }
 
 model Address {
-  id         Int      @id @default(autoincrement())
-  hotelId    Int      @unique // enforce 1:1 (one address per hotel)
+  id         String   @id @default(cuid())
+  hotelId    String   @unique // enforce 1:1 (one address per hotel)
   address    String
   district   String
   state      String
@@ -160,8 +170,8 @@ model Address {
 }
 
 model Inventory {
-  id            Int      @id @default(autoincrement())
-  hotelId       Int
+  id            String   @id @default(cuid())
+  hotelId       String
   inventoryCode String   @unique // previously: inventoryId (business id)
   isActive      Boolean  @default(true)
   createdAt     DateTime @default(now())
@@ -173,9 +183,9 @@ model Inventory {
 }
 
 model InventoryItem {
-  id                Int          @id @default(autoincrement())
-  inventoryId       Int
-  hotelId           Int
+  id                String       @id @default(cuid())
+  inventoryId       String
+  hotelId           String
   price             Float
   quantity          Float
   itemName          String
@@ -199,9 +209,9 @@ model InventoryItem {
 }
 
 model Cart {
-  id        Int      @id @default(autoincrement())
-  userId    Int
-  hotelId   Int
+  id        String   @id @default(cuid())
+  userId    String
+  hotelId   String
   cartCode  String   @unique // previously: cartId (business id)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -214,25 +224,28 @@ model Cart {
 }
 
 model CartItem {
-  id                Int      @id @default(autoincrement())
-  cartId            Int
-  inventoryItemId   Int
+  id                String  @id @default(cuid())
+  cartId            String
+  inventoryItemId   String
   quantity          Float
-  addedByEmployeeId Int?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  addedByEmployeeId String?
+  addedByUserId     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   cart            Cart          @relation(fields: [cartId], references: [id])
   inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id])
   addedByEmployee Employee?     @relation("EmployeeToCartItems", fields: [addedByEmployeeId], references: [id])
+  addedByUser     User?         @relation("UserToCartItems", fields: [addedByUserId], references: [id])
 }
 
 model Order {
-  id            Int               @id @default(autoincrement())
+  id            String            @id @default(cuid())
   orderCode     String            @unique // previously: orderId (business id)
-  hotelId       Int
-  userId        Int
-  cartId        Int?
+  hotelId       String
+  userId        String
+  cartId        String?
   totalItems    Int
   orderStatus   OrderStatusEnum   @default(Pending)
   amount        Float
@@ -253,9 +266,9 @@ model Order {
 }
 
 model OrderItem {
-  id              Int      @id @default(autoincrement())
-  orderId         Int
-  inventoryItemId Int
+  id              String   @id @default(cuid())
+  orderId         String
+  inventoryItemId String
   quantity        Float
   price           Float
   createdAt       DateTime @default(now())
@@ -265,31 +278,11 @@ model OrderItem {
   inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id])
 }
 
-model Payment {
-  id            Int               @id @default(autoincrement())
-  paymentCode   String            @unique // previously: paymentId (business id)
-  userId        Int
-  orderId       Int               @unique // enforces 1:1 Order↔Payment
-  hotelId       Int
-  amount        Float
-  tax           Float             @default(0)
-  discount      Float             @default(0)
-  totalAmount   Float
-  paymentMethod String
-  paymentStatus PaymentStatusEnum @default(Pending)
-  transactionId String?
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
-
-  user  User  @relation(fields: [userId], references: [id])
-  order Order @relation(fields: [orderId], references: [id])
-  hotel Hotel @relation(fields: [hotelId], references: [id])
-}
-
 model Subscription {
-  id               Int      @id @default(autoincrement())
+  id               String   @id @default(cuid())
   subscriptionCode String   @unique // previously: subscriptionId (business id)
-  userId           Int
+  userId           String
+  planId           String
   planName         String
   amount           Float
   tenure           Int // months, for example
@@ -302,23 +295,98 @@ model Subscription {
 }
 
 model Employee {
-  id           Int      @id @default(autoincrement())
-  employeeCode String   @unique // previously: employeeId (business id)
-  hotelId      Int
-  userId       Int
-  role         String
-  isActive     Boolean  @default(true)
+  id           String    @id @default(cuid())
+  employeeCode String    @unique // previously: employeeId (business id)
+  hotelId      String
+  userId       String
+  role         RolesEnum @default(Employee)
+  isActive     Boolean   @default(true)
   name         String
-  contactId    Int?
+  contactId    String?
   password     String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  lastLoginAt  DateTime  @default(now())
 
   hotel   Hotel    @relation(fields: [hotelId], references: [id])
   contact Contact? @relation(fields: [contactId], references: [id])
   user    User     @relation(fields: [userId], references: [id])
 
   cartItemsAdded CartItem[] @relation("EmployeeToCartItems")
+}
+
+model Payment {
+  id          String  @id @default(cuid())
+  paymentCode String  @unique // previously: paymentId (business id)
+  userId      String?
+  orderId     String? @unique // enforces 1:1 Order↔Payment
+
+  alokahUserId  String?
+  alokahOrderId String? @unique
+
+  hotelId       String
+  amount        Float
+  tax           Float             @default(0)
+  discount      Float             @default(0)
+  totalAmount   Float
+  paymentMethod String
+  paymentStatus PaymentStatusEnum @default(Pending)
+  transactionId String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  user        User?        @relation(fields: [userId], references: [id])
+  order       Order?       @relation(fields: [orderId], references: [id])
+  hotel       Hotel        @relation(fields: [hotelId], references: [id])
+  alokahUser  AlokahUser?  @relation(fields: [alokahUserId], references: [id])
+  alokahOrder AlokahOrder? @relation(fields: [alokahOrderId], references: [id])
+}
+
+model AlokahUser {
+  id          String   @id @default(cuid())
+  username    String   @unique
+  mobile      String   @unique
+  lastLoginAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  isActive    Boolean  @default(true)
+
+  orders             AlokahOrder[]
+  payments           Payment[]
+  inventoriesUpdated AlokahInventory[]
+}
+
+model AlokahInventory {
+  id            String   @id @default(cuid())
+  inventoryCode String   @unique
+  isActive      Boolean  @default(true)
+  lastUpdatedBy String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  lastUpdatedByUser AlokahUser @relation(fields: [lastUpdatedBy], references: [id])
+}
+
+model AlokahOrder {
+  id          String          @id @default(cuid())
+  orderCode   String          @unique
+  orderStatus OrderStatusEnum @default(Pending)
+  orderedBy   String
+  orderedFor  String
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  isActive    Boolean         @default(true)
+
+  amount        Float
+  discount      Float             @default(0)
+  tax           Float             @default(0)
+  totalAmount   Float
+  paymentStatus PaymentStatusEnum @default(Pending)
+  transactionId String?
+
+  orderedByAlokahUser AlokahUser @relation(fields: [orderedBy], references: [id])
+  orderedForUser      Hotel      @relation(fields: [orderedFor], references: [id])
+  payment             Payment?
 }
 
 // Optional lookup table if you still want it; not used by FKs.
