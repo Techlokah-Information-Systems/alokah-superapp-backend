@@ -304,3 +304,7 @@ export const verifyUser = catchAsync(
     }
   }
 );
+
+export const createEmployee = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {}
+);

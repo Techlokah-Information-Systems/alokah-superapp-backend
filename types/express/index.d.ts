@@ -1,0 +1,13 @@
+import { User } from "../../generated/prisma/client";
+
+declare global {
+  namespace Express {
+    interface Request {
+      user?: User | null;
+    }
+  }
+}
+
+export interface JwtPayloadCustom {
+  userId: string;
+}
