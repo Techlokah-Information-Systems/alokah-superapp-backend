@@ -1,0 +1,8 @@
+-- AlterTable
+ALTER TABLE "User" ADD COLUMN     "isEmailBasedLogin" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN     "isPasswordBasedLogin" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN     "isPasswordChanged" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN     "isPhoneBasedLogin" BOOLEAN NOT NULL DEFAULT false,
+ALTER COLUMN "email" DROP NOT NULL,
+ALTER COLUMN "phone" DROP NOT NULL,
+ALTER COLUMN "isActive" SET DEFAULT false;

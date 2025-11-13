@@ -3,8 +3,8 @@
 // --------------------
 
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
+  output   = "../generated/prisma/client"
 }
 
 datasource db {
@@ -78,18 +78,29 @@ enum HotelTypeEnum {
 // --------------------
 
 model User {
-  id               String   @id @default(cuid())
-  username         String   @unique
-  email            String   @unique
-  phone            String   @unique
-  lastLoginAt      DateTime @default(now())
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  isActive         Boolean  @default(true)
-  isProUser        Boolean  @default(false)
-  subscriptionId   String?
-  isTrialActivated Boolean  @default(false)
-  isTrialOver      Boolean  @default(false)
+  id       String  @id @default(cuid())
+  username String  @unique
+  password String?
+  email    String? @unique
+  phone    String? @unique
+
+  lastLoginAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  isActive              Boolean  @default(false)
+  isProUser             Boolean  @default(false)
+  subscriptionId        String?
+  isTrialActivated      Boolean  @default(false)
+  isTrialOver           Boolean  @default(false)
+  passwordLastChangedAt DateTime @default(now())
+  isPasswordChanged     Boolean  @default(false)
+  isEmailVerified       Boolean  @default(false)
+  isPhoneVerified       Boolean  @default(false)
+
+  isEmailBasedLogin    Boolean @default(false)
+  isPasswordBasedLogin Boolean @default(false)
+  isPhoneBasedLogin    Boolean @default(false)
 
   // Relations
   hotelsOwned   Hotel[]        @relation("HotelOwner")
@@ -100,6 +111,20 @@ model User {
   employees     Employee[]
 
   cartItemsAdded CartItem[] @relation("UserToCartItems")
+  otps           OTP[]
+}
+
+model OTP {
+  id        String   @id @default(cuid())
+  otp       String
+  userId    String
+  email     String?
+  phone     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  expiresAt DateTime
+
+  user User @relation(fields: [userId], references: [id])
 }
 
 model HotelType {
@@ -187,7 +212,7 @@ model InventoryItem {
   inventoryId       String
   hotelId           String
   price             Float
-  quantity          Float
+  sku               String       @unique
   itemName          String
   stock             Float
   minOrderQuantity  Float        @default(1)
@@ -364,7 +389,29 @@ model AlokahInventory {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  lastUpdatedByUser AlokahUser @relation(fields: [lastUpdatedBy], references: [id])
+  items             AlokahInventoryItem[]
+  lastUpdatedByUser AlokahUser            @relation(fields: [lastUpdatedBy], references: [id])
+}
+
+model AlokahInventoryItem {
+  id                String       @id @default(cuid())
+  inventoryId       String
+  itemName          String
+  price             Float
+  sku               String       @unique
+  stock             Float
+  minOrderQuantity  Float        @default(1)
+  minStockThreshold Float        @default(0)
+  metrics           MetricsEnum  @default(Kg)
+  shelfLifeDays     Int
+  isHotItem         Boolean      @default(false)
+  image             String?
+  isActive          Boolean      @default(true)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  itemType          ItemTypeEnum @default(Other)
+
+  alokahInventory AlokahInventory @relation(fields: [inventoryId], references: [id])
 }
 
 model AlokahOrder {
