@@ -1,13 +1,11 @@
 import express from "express";
 import { rateLimit } from "express-rate-limit";
 import cors from "cors";
-import dotenv from "dotenv";
 import { API_BASE_PATH } from "./utils/constants";
 
 // Routes
 import userRoutes from "./routes/user.routes";
-
-dotenv.config({ path: ".env" });
+import authRoutes from "./routes/auth.routes";
 
 const app = express();
 
@@ -34,5 +32,6 @@ app.get("/", (req, res) => {
 });
 
 app.use(`${API_BASE_PATH}/user`, userRoutes);
+app.use(`${API_BASE_PATH}/auth`, authRoutes);
 
 export default app;

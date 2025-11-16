@@ -9,6 +9,8 @@ import {
 } from "./constants";
 import path from "path";
 import { create } from "express-handlebars";
+import prisma from "../prisma/prisma";
+import { OtpPurposeTypeEnum, OtpTypeEnum } from "../generated/prisma/client";
 
 const hbs = create({
   extname: ".hbs",
@@ -21,7 +23,21 @@ export const generateOtp = () => {
   return otp;
 };
 
-export const sendMail = async (mailDetails: any) => {
+type MailDetailsProps = {
+  email: string;
+  hbs: string;
+  templateData: any;
+  subject?: string;
+  cc?: string[];
+  bcc?: string[];
+  attachments?: {
+    filename: string;
+    path: string;
+    cid: string;
+  }[];
+};
+
+export const sendMail = async (mailDetails: MailDetailsProps) => {
   const transporter = nodemailer.createTransport({
     host: SMTP_HOST,
     port: SMTP_PORT,
@@ -46,7 +62,7 @@ export const sendMail = async (mailDetails: any) => {
   });
 
   const info = await transporter.sendMail({
-    from: SMTP_FROM,
+    from: SMTP_USER,
     to: mailDetails?.email,
     subject: mailDetails?.subject,
     cc: mailDetails?.cc,
@@ -58,6 +74,53 @@ export const sendMail = async (mailDetails: any) => {
   if (info.accepted.length > 0) {
     return true;
   } else {
+    return false;
+  }
+};
+
+type SendOtpProps = {
+  email?: string | null;
+  phone?: string | null;
+  userId: string;
+  username?: string | null;
+  expiresAt: Date;
+  type: OtpTypeEnum;
+  purpose: OtpPurposeTypeEnum;
+  otp: number;
+};
+
+export const sendEmailOtp = async (otpSettings: SendOtpProps) => {
+  try {
+    const otpStatus = await prisma.oTP.create({
+      data: {
+        otp: otpSettings.otp?.toString(),
+        userId: otpSettings.userId,
+        email: otpSettings.email,
+        phone: otpSettings.phone,
+        expiresAt: otpSettings.expiresAt,
+        type: otpSettings.type,
+        purpose: otpSettings.purpose,
+      },
+    });
+
+    const result = await sendMail({
+      email: otpSettings.email!,
+      hbs: "SendEmailOtp.hbs",
+      templateData: {
+        otp: otpSettings.otp,
+      },
+      attachments: [
+        {
+          filename: "alokah.png",
+          path: path.join(__dirname, "..", "assets", "alokah.png"),
+          cid: "logo_cid",
+        },
+      ],
+    });
+
+    return result && otpStatus ? true : false;
+  } catch (error) {
+    console.log(error);
     return false;
   }
 };

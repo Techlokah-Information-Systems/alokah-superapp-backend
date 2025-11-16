@@ -73,6 +73,20 @@ enum HotelTypeEnum {
   FiveStar
 }
 
+enum OtpTypeEnum {
+  Email
+  Phone
+  Username
+  Password
+}
+
+enum OtpPurposeTypeEnum {
+  Login
+  Verification
+  PasswordReset
+  Other
+}
+
 // --------------------
 // Core models
 // --------------------
@@ -116,14 +130,17 @@ model User {
 }
 
 model OTP {
-  id        String   @id @default(cuid())
+  id        String             @id @default(cuid())
   otp       String
   userId    String
+  username  String?
   email     String?
   phone     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
   expiresAt DateTime
+  type      OtpTypeEnum        @default(Email)
+  purpose   OtpPurposeTypeEnum @default(Login)
 
   user User @relation(fields: [userId], references: [id])
 }

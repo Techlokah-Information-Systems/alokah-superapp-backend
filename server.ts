@@ -1,5 +1,8 @@
 import app from "./app";
 import { PORT, ENVIRONMENT, HOST } from "./utils/constants";
+import dotenv from "dotenv";
+
+dotenv.config({ path: ".env" });
 
 let server: any;
 
