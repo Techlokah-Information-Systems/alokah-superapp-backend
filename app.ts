@@ -2,10 +2,14 @@ import express from "express";
 import { rateLimit } from "express-rate-limit";
 import cors from "cors";
 import { API_BASE_PATH } from "./utils/constants";
+import errorHandler from "./middleware/errorHandler";
 
 // Routes
 import userRoutes from "./routes/user.routes";
 import authRoutes from "./routes/auth.routes";
+import hotelRoutes from "./routes/hotel.routes";
+import inventoryRoutes from "./routes/inventory.routes";
+import employeeRoutes from "./routes/employee.routes";
 
 const app = express();
 
@@ -33,5 +37,9 @@ app.get("/", (req, res) => {
 
 app.use(`${API_BASE_PATH}/user`, userRoutes);
 app.use(`${API_BASE_PATH}/auth`, authRoutes);
+app.use(`${API_BASE_PATH}/hotel`, hotelRoutes);
+app.use(`${API_BASE_PATH}/inventory`, inventoryRoutes);
+app.use(`${API_BASE_PATH}/employee`, employeeRoutes);
 
+app.use(errorHandler);
 export default app;

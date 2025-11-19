@@ -74,6 +74,22 @@ export const deleteUser = catchAsync(
   }
 );
 
-export const createEmployee = catchAsync(
-  async (req: Request, res: Response, next: NextFunction) => {}
+export const getUser = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const user = req.user;
+    if (!user) {
+      return res.status(400).send({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    console.log(user);
+
+    return res.status(200).json({
+      success: true,
+      message: "User found",
+      data: user,
+    });
+  }
 );

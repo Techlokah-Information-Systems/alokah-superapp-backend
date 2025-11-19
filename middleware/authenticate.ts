@@ -7,7 +7,10 @@ import { NextFunction, Request, Response } from "express";
 export const isAuthenticatedUser = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const token = req.headers.authorization?.split(" ")[1];
+
     if (!token) {
+      console.log("Inside Here");
+
       return next(new Error("Unauthorized"));
     }
 
@@ -43,6 +46,7 @@ export const authorizeRoles = (...roles: string[]) => {
         )
       );
     }
+
     next();
   };
 };

@@ -145,21 +145,12 @@ model OTP {
   user User @relation(fields: [userId], references: [id])
 }
 
-model HotelType {
-  id          String        @id @default(cuid())
-  type        HotelTypeEnum @unique
-  description String?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-
-  hotels Hotel[]
-}
-
 model Contact {
   id             String   @id @default(cuid())
-  phone          String
+  phone          String   @unique
   alternatePhone String?
-  email          String
+  email          String?
+  website        String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -169,21 +160,20 @@ model Contact {
 }
 
 model Hotel {
-  id          String   @id @default(cuid())
-  hotelCode   String   @unique // previously: hotelId (string business id)
-  ownerId     String
-  name        String
-  contactId   String?
-  hotelTypeId String
-  logo        String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  isActive    Boolean  @default(true)
+  id        String        @id @default(cuid())
+  hotelCode String        @unique // previously: hotelId (string business id)
+  ownerId   String
+  name      String
+  contactId String?
+  hotelType HotelTypeEnum @default(Veg)
+  logo      String?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  isActive  Boolean       @default(true)
 
   // Relations
-  owner     User      @relation("HotelOwner", fields: [ownerId], references: [id])
-  contact   Contact?  @relation(fields: [contactId], references: [id])
-  hotelType HotelType @relation(fields: [hotelTypeId], references: [id])
+  owner   User     @relation("HotelOwner", fields: [ownerId], references: [id])
+  contact Contact? @relation(fields: [contactId], references: [id])
 
   // One-to-one Address: Address holds FK with unique constraint
   address Address?
@@ -203,7 +193,7 @@ model Address {
   address    String
   district   String
   state      String
-  locality   String
+  locality   String?
   country    String
   postalCode String
   createdAt  DateTime @default(now())

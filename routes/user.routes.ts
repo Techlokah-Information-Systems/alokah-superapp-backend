@@ -1,8 +1,8 @@
-import express from "express";
-import { addUser } from "../controllers/user.controller";
+import router from "./route";
+import { addUser, getUser } from "../controllers/user.controller";
+import { isAuthenticatedUser } from "../middleware/authenticate";
 
-const router = express.Router();
-
-router.post("/register", addUser);
+router.route("/register").post(addUser);
+router.route("/").get(isAuthenticatedUser, getUser);
 
 export default router;

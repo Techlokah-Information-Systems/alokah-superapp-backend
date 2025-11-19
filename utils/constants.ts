@@ -20,3 +20,5 @@ export const JWT_SECRET_REFRESH_EXPIRES_IN =
   process.env.JWT_SECRET_REFRESH_EXPIRES_IN!;
 
 export const JWT_REFRESH_TOKEN = process.env.JWT_SECRET_REFRESH_KEY!;
+
+export const META_ACCESS_TOKEN = process.env.META_ACCESS_TOKEN!;

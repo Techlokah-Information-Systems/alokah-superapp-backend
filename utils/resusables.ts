@@ -11,6 +11,7 @@ import path from "path";
 import { create } from "express-handlebars";
 import prisma from "../prisma/prisma";
 import { OtpPurposeTypeEnum, OtpTypeEnum } from "../generated/prisma/client";
+import crypto from "crypto";
 
 const hbs = create({
   extname: ".hbs",
@@ -123,4 +124,23 @@ export const sendEmailOtp = async (otpSettings: SendOtpProps) => {
     console.log(error);
     return false;
   }
+};
+
+export const hashPassword = (password: string) => {
+  const salt = crypto.randomBytes(16).toString("hex");
+  const hash = crypto
+    .pbkdf2Sync(password, salt, 10000, 64, "sha512")
+    .toString("hex");
+
+  return `${salt}:${hash}`;
+};
+
+export const comparePassword = (password: string, hash: string) => {
+  const [salt, originalHash] = hash.split(":");
+
+  const hashToCompare = crypto
+    .pbkdf2Sync(password, salt, 10000, 64, "sha512")
+    .toString("hex");
+
+  return originalHash === hashToCompare;
 };
