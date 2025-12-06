@@ -452,3 +452,17 @@ model Metrics {
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 }
+
+model RefreshTokens {
+  id String @id @default(cuid())
+  userId String
+  tokenId String @unique
+  tokenHash String
+  userAgent String?
+  ipAddress String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  lastUsedAt DateTime? @default(now())
+  expiresAt DateTime
+  revoked Boolean @default(false)
+}

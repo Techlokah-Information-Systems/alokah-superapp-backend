@@ -126,7 +126,7 @@ export const sendEmailOtp = async (otpSettings: SendOtpProps) => {
   }
 };
 
-export const hashPassword = (password: string) => {
+export const hashItem = (password: string) => {
   const salt = crypto.randomBytes(16).toString("hex");
   const hash = crypto
     .pbkdf2Sync(password, salt, 10000, 64, "sha512")
@@ -135,7 +135,7 @@ export const hashPassword = (password: string) => {
   return `${salt}:${hash}`;
 };
 
-export const comparePassword = (password: string, hash: string) => {
+export const compareItem = (password: string, hash: string) => {
   const [salt, originalHash] = hash.split(":");
 
   const hashToCompare = crypto

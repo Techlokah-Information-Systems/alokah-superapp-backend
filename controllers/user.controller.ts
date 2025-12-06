@@ -28,10 +28,6 @@ export const addUser = catchAsync(
       isPhoneBasedLogin: phone ? true : false,
     };
 
-    console.log(data);
-    console.log("Final data before Prisma:", data);
-    console.log("Type of data.phone:", typeof data.phone, data.phone);
-
     if (!password) {
       await prisma.user.create({
         data: data,
@@ -59,6 +55,7 @@ export const addUser = catchAsync(
 export const updateUser = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     // Implement Logic for updating user in DB
+    const user = req.user;
   }
 );
 
@@ -83,8 +80,6 @@ export const getUser = catchAsync(
         message: "User not found",
       });
     }
-
-    console.log(user);
 
     return res.status(200).json({
       success: true,

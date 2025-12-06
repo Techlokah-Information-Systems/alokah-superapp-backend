@@ -5,9 +5,9 @@ import { JWT_REFRESH_TOKEN } from "../utils/constants";
 import jwt from "jsonwebtoken";
 import prisma from "../prisma/prisma";
 import {
-  comparePassword,
+  compareItem,
   generateOtp,
-  hashPassword,
+  hashItem,
   sendMail,
 } from "../utils/resusables";
 import path from "path";
@@ -15,7 +15,7 @@ import { OtpPurposeTypeEnum, OtpTypeEnum } from "../generated/prisma/client";
 
 export const refreshAccessToken = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    const refreshToken = req.cookies.refreshToken;
+    const refreshToken = req.cookies.refreshToken || req.body.refreshToken;
 
     if (!refreshToken) {
       return res.status(401).json({
@@ -30,7 +30,8 @@ export const refreshAccessToken = catchAsync(
         refreshToken,
         JWT_REFRESH_TOKEN
       ) as unknown as jwt.JwtPayload & {
-        userId: string;
+        sub: string;
+        tid: string;
       };
     } catch (error) {
       return res.status(403).json({
@@ -39,7 +40,56 @@ export const refreshAccessToken = catchAsync(
       });
     }
 
-    const newAccessToken = generateToken(decoded.userId);
+    const { tid: tokenId, sub: userId } = decoded;
+
+    if (!tokenId || !userId) {
+      return res.status(403).json({
+        success: false,
+        message: "Invalid refresh token",
+      });
+    }
+
+    const token = await prisma.refreshTokens.findUnique({
+      where: {
+        tokenId,
+      },
+    });
+
+    if (!token) {
+      return res.status(403).json({
+        success: false,
+        message: "Invalid refresh token",
+      });
+    }
+
+    async function deleteToken(tokenId: string) {
+      await prisma.refreshTokens.delete({
+        where: {
+          tokenId,
+        },
+      });
+    }
+
+    if (token.revoked || Date.now() > token.expiresAt.getTime()) {
+      await deleteToken(tokenId);
+      return res.status(403).json({
+        success: false,
+        message: "Invalid refresh token",
+      });
+    }
+
+    const hashToken = hashItem(refreshToken);
+    const hashesMatch = compareItem(hashToken, token.tokenHash);
+
+    if (!hashesMatch) {
+      await deleteToken(tokenId);
+      return res.status(403).json({
+        success: false,
+        message: "Invalid refresh token",
+      });
+    }
+
+    const newAccessToken = generateToken(userId);
     return res.status(200).json({
       success: true,
       message: "Access token refreshed successfully",
@@ -328,7 +378,7 @@ export const setPassword = catchAsync(
       });
     }
 
-    password = hashPassword(password);
+    password = hashItem(password);
 
     const user = await prisma.user.findFirst({
       where: {
@@ -418,7 +468,7 @@ export const signInUsingPassword = catchAsync(
       });
     }
 
-    if (user.password !== password) {
+    if (!compareItem(password, user.password!)) {
       return res.status(400).json({
         success: false,
         message: "Invalid password",
@@ -426,13 +476,27 @@ export const signInUsingPassword = catchAsync(
     }
 
     const token = generateToken(user.id);
-    const refreshToken = generateRefreshToken(user.id);
+    const { token: refreshToken, tokenId } = generateRefreshToken(user.id);
+
+    const tokenHash = hashItem(refreshToken);
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+    const refreshTokens = await prisma.refreshTokens.create({
+      data: {
+        tokenHash,
+        userId: user.id,
+        expiresAt,
+        userAgent: req.get("User-Agent"),
+        tokenId,
+      },
+    });
 
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
       secure: true,
-      sameSite: "none",
+      sameSite: "strict",
       maxAge: 7 * 24 * 60 * 60 * 1000,
+      path: "/refresh",
     });
 
     return res.status(200).json({
@@ -476,7 +540,7 @@ export const changePassword = catchAsync(
       });
     }
 
-    if (!comparePassword(oldPassword, user.password!)) {
+    if (!compareItem(oldPassword, user.password!)) {
       return res.status(400).json({
         success: false,
         message: "Invalid old password",
@@ -488,7 +552,7 @@ export const changePassword = catchAsync(
         id: userId,
       },
       data: {
-        password: hashPassword(newPassword),
+        password: hashItem(newPassword),
       },
     });
 
