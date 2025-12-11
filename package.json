@@ -4,7 +4,8 @@
   "main": "app.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "nodemon --exec ts-node server.ts"
+    "dev": "nodemon --exec ts-node server.ts",
+    "prisma": "npx prisma generate && npx prisma migrate dev --name"
   },
   "author": "",
   "license": "ISC",

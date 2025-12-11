@@ -9,7 +9,7 @@
 import prisma from "../prisma/prisma";
 import { Request, Response, NextFunction } from "express";
 import catchAsync from "../middleware/catchAsyncError";
-import { Prisma } from "../generated/prisma/client";
+import { ContactForEnum } from "../generated/prisma/client";
 
 type Contact = {
   id?: string;
@@ -17,6 +17,7 @@ type Contact = {
   alternatePhone?: string;
   email?: string;
   website: string;
+  contactFor: ContactForEnum;
 };
 
 type Address = {
@@ -53,20 +54,20 @@ const addContactInformation = async (
   }
 
   try {
-    const result = !update
-      ? await prisma.contact.create({
+    const result = update
+      ? await prisma.contact.update({
+          where: {
+            id: contact.id,
+          },
+          data: updatedData,
+        })
+      : await prisma.contact.create({
           data: {
             phone: contact.phone,
             alternatePhone: contact.alternatePhone,
             email: contact.email,
             website: contact.website,
           },
-        })
-      : await prisma.contact.update({
-          where: {
-            id: contact.id,
-          },
-          data: updatedData,
         });
 
     return result as Contact;
@@ -90,8 +91,14 @@ const addAddress = async (
   }
 
   try {
-    const result = !update
-      ? await prisma.address.create({
+    const result = update
+      ? await prisma.address.update({
+          where: {
+            id: address.id,
+          },
+          data: updatedData,
+        })
+      : await prisma.address.create({
           data: {
             address: address.address,
             district: address.district,
@@ -101,12 +108,6 @@ const addAddress = async (
             postalCode: address.postalCode,
             hotelId: address.hotelId,
           },
-        })
-      : await prisma.address.update({
-          where: {
-            id: address.id,
-          },
-          data: updatedData,
         });
 
     return result as Address;
@@ -133,28 +134,79 @@ const generateHotelCode = async (hotelName: string) => {
   }
 };
 
+// name: "done",
+// hotelType: "done",
+// logo: "done",
+// phone: "done",
+// email: "done",
+// website: "done",
+// alternatePhone: "done",
+// alternatePhoneCountryCode: "",
+// address: "done",
+// district: "done",
+// state: "done",
+// postalCode: "done",
+// locality: "done",
+// country: "done",
+// businessType: "done",
+// isAccommodationAvailable: done,
+// totalRooms: done,
+// totalFloors: done,
+
 export const registerHotel = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const {
       name,
       logo,
-      address: rawAddress,
       hotelType,
 
       phone,
       alternatePhone,
       email,
       website,
+      businessType,
+      isAccommodationAvailable,
+      totalFloors,
+      totalRooms,
+
+      address,
+      district,
+      state,
+      locality,
+      country,
+      postalCode,
+
+      scope,
     } = req.body;
 
-    if (!rawAddress)
-      return res.status(400).send({
-        success: false,
-        message: "Address is required",
-      });
+    console.log("==========Hotel Registration==========");
+    console.log("Name: ", name);
+    console.log("Logo: ", logo);
+    console.log("Hotel Type: ", hotelType);
+    console.log("Phone: ", phone);
+    console.log("Alternate Phone: ", alternatePhone);
+    console.log("Email: ", email);
+    console.log("Website: ", website);
+    console.log("Business Type: ", businessType);
+    console.log("Is Accommodation Available: ", isAccommodationAvailable);
+    console.log("Total Floors: ", totalFloors);
+    console.log("Total Rooms: ", totalRooms);
+    console.log("Address: ", address);
+    console.log("District: ", district);
+    console.log("State: ", state);
+    console.log("Locality: ", locality);
+    console.log("Country: ", country);
+    console.log("Postal Code: ", postalCode);
+    console.log("========================================");
 
-    const { address, district, state, locality, country, postalCode } =
-      rawAddress;
+    if (isAccommodationAvailable) {
+      if (!totalFloors || !totalRooms) {
+        return res.status(400).send({
+          success: false,
+          message: "Total floors and total rooms are required",
+        });
+      }
+    }
 
     if (
       !name ||
@@ -163,7 +215,8 @@ export const registerHotel = catchAsync(
       !district ||
       !state ||
       !country ||
-      !postalCode
+      !postalCode ||
+      !scope
     ) {
       return res.status(400).send({
         success: false,
@@ -188,9 +241,6 @@ export const registerHotel = catchAsync(
           {
             email: email,
           },
-          {
-            website: website,
-          },
         ],
       },
     });
@@ -207,6 +257,7 @@ export const registerHotel = catchAsync(
       alternatePhone,
       email,
       website,
+      contactFor: ContactForEnum.Hotel,
     });
 
     const contactId = contact.id;
@@ -216,11 +267,12 @@ export const registerHotel = catchAsync(
       const hotel = await prisma.hotel.create({
         data: {
           name: name,
-          logo: logo ? logo : null,
+          logo: logo,
           hotelCode: hotelCode,
           contactId: contactId,
           ownerId: user.id,
           hotelType: hotelType,
+          type: businessType,
         },
       });
 
@@ -234,10 +286,30 @@ export const registerHotel = catchAsync(
         hotelId: hotel.id,
       });
 
+      if (isAccommodationAvailable) {
+        await prisma.hotelAccommodation.create({
+          data: {
+            hotelId: hotel.id,
+            totalFloors: totalFloors,
+            totalRooms: totalRooms,
+          },
+        });
+      }
+
       await prisma.inventory.create({
         data: {
           hotelId: hotel.id,
           inventoryCode: `INV-${hotelCode}`,
+        },
+      });
+
+      await prisma.user.update({
+        where: {
+          id: user.id,
+        },
+        data: {
+          scope: scope,
+          isRegistrationJourneyCompleted: true,
         },
       });
 
@@ -254,6 +326,7 @@ export const registerHotel = catchAsync(
       return res.status(500).send({
         success: false,
         message: "Something went wrong",
+        error,
       });
     }
   }

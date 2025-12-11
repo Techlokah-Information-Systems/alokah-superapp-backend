@@ -45,12 +45,12 @@ export const addEmployee = catchAsync(
 
     const employeeCode = await generateEmployeeCode(hotel.name);
 
-    const password = hashItem(body.password as string);
+    const password = hashItem(body.password);
 
     const employee = await prisma.employee.create({
       data: {
         ...body,
-        employeeCode: employeeCode as string,
+        employeeCode: employeeCode,
         hotelId: hotel.id,
         userId: userId as string,
         password: password,

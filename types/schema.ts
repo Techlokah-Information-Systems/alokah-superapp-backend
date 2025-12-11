@@ -1,8 +1,11 @@
 import { z } from "zod";
 import {
+  BusinessType,
+  HotelTypeEnum,
   ItemTypeEnum,
   MetricsEnum,
   RolesEnum,
+  UserScopeEnum,
 } from "../generated/prisma/client";
 
 const inventoryItemBaseSchema = z.object({
@@ -34,6 +37,30 @@ const employeeBaseSchema = z.object({
   password: z.string().min(6, "Password must be atleast six characters"),
 });
 
+const hotelBaseSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  logo: z.string().optional(),
+  hotelType: z.enum(HotelTypeEnum),
+  phone: z.string().optional(),
+  email: z.string().optional(),
+  website: z.string().optional(),
+  alternatePhone: z.string().optional(),
+  alternatePhoneCountryCode: z.string().optional(),
+  businessType: z.enum(BusinessType),
+  isAccommodationAvailable: z.boolean().default(false),
+
+  totalFloors: z.number().optional(),
+  totalRooms: z.number().optional(),
+
+  address: z.string().min(1, "Address is required"),
+  district: z.string().min(1, "District is required"),
+  state: z.string().min(1, "State is required"),
+  locality: z.string().optional(),
+  country: z.string().min(1, "Country is required"),
+  postalCode: z.string().min(1, "Postal Code is required"),
+  scope: z.enum(UserScopeEnum),
+});
+
 export const createInventoryItemSchema = inventoryItemBaseSchema;
 export const updateInventoryItemSchema = inventoryItemBaseSchema
   .partial()
@@ -57,3 +84,5 @@ export const updateEmployeeSchema = employeeBaseSchema
       path: [],
     }
   );
+
+export const createHotelSchema = hotelBaseSchema;

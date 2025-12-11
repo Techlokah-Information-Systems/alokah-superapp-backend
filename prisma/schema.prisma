@@ -87,6 +87,26 @@ enum OtpPurposeTypeEnum {
   Other
 }
 
+enum UserScopeEnum {
+  Hotel
+  Personal
+  Alokah
+  Vendor
+}
+
+enum BusinessType {
+  Hotel
+  Restaurant
+  Cafe
+}
+
+enum ContactForEnum {
+  Hotel
+  Personal
+  Alokah
+  Vendor
+}
+
 // --------------------
 // Core models
 // --------------------
@@ -112,6 +132,9 @@ model User {
   isPasswordChanged     Boolean  @default(false)
   isEmailVerified       Boolean  @default(false)
   isPhoneVerified       Boolean  @default(false)
+
+  scope UserScopeEnum?
+  isRegistrationJourneyCompleted Boolean @default(false)
 
   isEmailBasedLogin    Boolean @default(false)
   isPasswordBasedLogin Boolean @default(false)
@@ -147,12 +170,15 @@ model OTP {
 
 model Contact {
   id             String   @id @default(cuid())
+  countryCode    String @default("+91")
   phone          String   @unique
   alternatePhone String?
+  alternateCountryCode String?
   email          String?
   website        String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+  contactFor     ContactForEnum @default(Hotel)
 
   // Back-relations (optional)
   hotels    Hotel[]
@@ -170,6 +196,7 @@ model Hotel {
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
   isActive  Boolean       @default(true)
+  type     BusinessType @default(Hotel)
 
   // Relations
   owner   User     @relation("HotelOwner", fields: [ownerId], references: [id])
@@ -185,6 +212,16 @@ model Hotel {
   payments       Payment[]
   employees      Employee[]
   alokahOrders   AlokahOrder[]
+}
+
+model HotelAccommodation {
+  id        String        @id @default(cuid())
+  hotelId String
+  isAccommodationAvailable Boolean @default(false)
+  totalFloors Int @default(1)
+  totalRooms Int @default(1)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
 }
 
 model Address {

@@ -1,7 +1,7 @@
 import catchAsync from "../middleware/catchAsyncError";
 import { Request, Response, NextFunction } from "express";
 import { generateToken, generateRefreshToken } from "../utils/jwt";
-import { JWT_REFRESH_TOKEN } from "../utils/constants";
+import { JWT_REFRESH_TOKEN, JWT_SECRET } from "../utils/constants";
 import jwt from "jsonwebtoken";
 import prisma from "../prisma/prisma";
 import {
@@ -10,8 +10,65 @@ import {
   hashItem,
   sendMail,
 } from "../utils/resusables";
-import path from "path";
+import path from "node:path";
 import { OtpPurposeTypeEnum, OtpTypeEnum } from "../generated/prisma/client";
+
+export const getSession = catchAsync(async (req, res, next) => {
+  const token = req.headers.authorization?.split(" ")[1];
+
+  if (!token) {
+    return res.status(401).json({
+      success: false,
+      message: "Unauthorized",
+    });
+  }
+
+  let decoded;
+  try {
+    decoded = jwt.verify(token, JWT_SECRET) as unknown as jwt.JwtPayload & {
+      userId: string;
+    };
+  } catch (error) {
+    console.log(error);
+    return res.status(403).json({
+      success: false,
+      message: "Invalid token",
+    });
+  }
+
+  const user = await prisma.user.findUnique({
+    where: {
+      id: decoded.userId,
+    },
+    select: {
+      id: true,
+      email: true,
+      phone: true,
+      username: true,
+      role: true,
+      isActive: true,
+      isEmailVerified: true,
+      isPhoneVerified: true,
+      createdAt: true,
+      updatedAt: true,
+      scope: true,
+      isRegistrationJourneyCompleted: true,
+    },
+  });
+
+  if (!user) {
+    return res.status(404).json({
+      success: false,
+      message: "User not found",
+    });
+  }
+
+  return res.status(200).json({
+    success: true,
+    message: "User found",
+    data: user,
+  });
+});
 
 export const refreshAccessToken = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
@@ -101,6 +158,13 @@ export const refreshAccessToken = catchAsync(
 export const verifyUser = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const { email, phone, otp, type, purpose } = req.body;
+    console.log("=============AUTH START=============");
+    console.log("email", email);
+    console.log("phone", phone);
+    console.log("otp", otp);
+    console.log("type", type);
+    console.log("purpose", purpose);
+    console.log("=============AUTH END=============");
 
     if (!email && !phone) {
       return res.status(400).json({
@@ -261,7 +325,7 @@ export const sendOtp = catchAsync(
       });
     }
 
-    const user = await prisma.user.findFirst({
+    let user = await prisma.user.findFirst({
       where: {
         OR: [
           {
@@ -274,12 +338,20 @@ export const sendOtp = catchAsync(
       },
     });
 
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
+    let username;
+    if (email) {
+      username = email.split("@")[0];
+    } else {
+      username = phone;
     }
+
+    user ??= await prisma.user.create({
+      data: {
+        username: username,
+        email: email as string,
+        phone: phone as string,
+      },
+    });
 
     const latestOtp = await prisma.oTP.findFirst({
       where: {
@@ -559,6 +631,37 @@ export const changePassword = catchAsync(
     return res.status(200).json({
       success: true,
       message: "Password changed successfully",
+    });
+  }
+);
+
+export const setUserScope = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const userId = req.user?.id;
+    let { scope } = req.body;
+
+    console.log("scope: ", scope);
+
+    if (!scope) {
+      return res.status(400).json({
+        success: false,
+        message: "Scope is required",
+      });
+    }
+
+    const user = await prisma.user.update({
+      where: {
+        id: userId,
+      },
+      data: {
+        scope: scope,
+      },
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "User scope updated successfully",
+      user,
     });
   }
 );
