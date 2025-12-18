@@ -7,11 +7,11 @@ import {
   SMTP_PORT,
   SMTP_USER,
 } from "./constants";
-import path from "path";
+import path from "node:path";
 import { create } from "express-handlebars";
 import prisma from "../prisma/prisma";
 import { OtpPurposeTypeEnum, OtpTypeEnum } from "../generated/prisma/client";
-import crypto from "crypto";
+import crypto from "node:crypto";
 
 const hbs = create({
   extname: ".hbs",
@@ -79,7 +79,7 @@ export const sendMail = async (mailDetails: MailDetailsProps) => {
   }
 };
 
-type SendOtpProps = {
+export type SendOtpProps = {
   email?: string | null;
   phone?: string | null;
   userId: string;

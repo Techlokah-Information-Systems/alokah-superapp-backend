@@ -134,25 +134,6 @@ const generateHotelCode = async (hotelName: string) => {
   }
 };
 
-// name: "done",
-// hotelType: "done",
-// logo: "done",
-// phone: "done",
-// email: "done",
-// website: "done",
-// alternatePhone: "done",
-// alternatePhoneCountryCode: "",
-// address: "done",
-// district: "done",
-// state: "done",
-// postalCode: "done",
-// locality: "done",
-// country: "done",
-// businessType: "done",
-// isAccommodationAvailable: done,
-// totalRooms: done,
-// totalFloors: done,
-
 export const registerHotel = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const {

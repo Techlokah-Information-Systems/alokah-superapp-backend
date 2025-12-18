@@ -5,7 +5,7 @@ import {
   JWT_SECRET,
   JWT_SECRET_REFRESH_EXPIRES_IN,
 } from "./constants";
-import crypto from "crypto";
+import crypto from "node:crypto";
 
 export const generateToken = (userId: string) => {
   return jwt.sign(

@@ -1,0 +1,12 @@
+-- DropForeignKey
+ALTER TABLE "OTP" DROP CONSTRAINT "OTP_userId_fkey";
+
+-- AlterTable
+ALTER TABLE "OTP" ADD COLUMN     "alokahUserId" TEXT,
+ALTER COLUMN "userId" DROP NOT NULL;
+
+-- AddForeignKey
+ALTER TABLE "OTP" ADD CONSTRAINT "OTP_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "OTP" ADD CONSTRAINT "OTP_alokahUserId_fkey" FOREIGN KEY ("alokahUserId") REFERENCES "AlokahUser"("id") ON DELETE SET NULL ON UPDATE CASCADE;

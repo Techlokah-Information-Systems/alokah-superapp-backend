@@ -1,3 +1,0 @@
--- AlterTable
-ALTER TABLE "User" ALTER COLUMN "scope" DROP NOT NULL,
-ALTER COLUMN "scope" DROP DEFAULT;

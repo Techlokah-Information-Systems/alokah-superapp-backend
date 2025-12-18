@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import prisma from "../prisma/prisma";
 import catchAsync from "../middleware/catchAsyncError";
-import { z } from "zod";
 import {
   createInventoryItemSchema,
   updateInventoryItemSchema,
@@ -11,30 +10,32 @@ import {
 export const addItemToInventory = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const user = req.user;
-    const body: z.infer<typeof createInventoryItemSchema> = req.body;
 
-    const {
-      isHotItem,
-      hotelId,
-      price,
-      sku,
-      minOrderQuantity,
-      metrics,
-      minStockThreshold,
-      itemName,
-      itemType,
-    } = body;
+    if (!user?.id) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized request. User not found.",
+      });
+    }
+
+    const validation = createInventoryItemSchema.safeParse(req.body);
+
+    if (!validation.success) {
+      return res.status(400).json({
+        success: false,
+        message: "Validation Error",
+        errors: validation.error.format(),
+      });
+    }
+
+    const body = validation.data;
+
+    const { hotelId, itemName } = body;
 
     const hotel = await prisma.hotel.findFirst({
       where: {
-        AND: [
-          {
-            id: hotelId,
-          },
-          {
-            ownerId: user?.id,
-          },
-        ],
+        id: hotelId,
+        ownerId: user.id,
       },
     });
 
@@ -78,16 +79,32 @@ export const addItemToInventory = catchAsync(
 export const updateInventoryItem = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const { id } = req.params;
-    const userId = req.user?.id;
+    const user = req.user;
+    const userId = user?.id;
 
-    const body: z.infer<typeof updateInventoryItemSchema> = req.body;
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized request",
+      });
+    }
 
-    console.log(body);
+    const validation = updateInventoryItemSchema.safeParse(req.body);
 
-    if (!body) {
+    if (!validation.success) {
       return res.status(400).json({
         success: false,
-        message: "Atleast one field is required to update",
+        message: "Validation Error",
+        errors: validation.error.format(),
+      });
+    }
+
+    const body = validation.data;
+
+    if (!body || Object.keys(body).length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "At least one field is required to update",
       });
     }
 
@@ -129,7 +146,15 @@ export const updateInventoryItem = catchAsync(
 export const deleteInventoryItem = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const { id } = req.params;
-    const userId = req.user?.id;
+    const user = req.user;
+    const userId = user?.id;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized request",
+      });
+    }
 
     const inventoryItem = await prisma.inventoryItem.findFirst({
       where: {

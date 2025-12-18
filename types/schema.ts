@@ -6,6 +6,7 @@ import {
   MetricsEnum,
   RolesEnum,
   UserScopeEnum,
+  SecretsTypeEnum,
 } from "../generated/prisma/client";
 
 const inventoryItemBaseSchema = z.object({
@@ -86,3 +87,42 @@ export const updateEmployeeSchema = employeeBaseSchema
   );
 
 export const createHotelSchema = hotelBaseSchema;
+
+export const createAlokahInventoryItemSchema = z.object({
+  inventoryId: z.string().cuid("Inventory ID is required"),
+  itemName: z.string().min(3, "Item Name is required"),
+  sku: z.string().min(1, "SKU Cannot be empty"),
+  price: z.number().positive({ message: "Price must be greater than 0" }),
+  stock: z
+    .number()
+    .min(0, { message: "Stock must be equal to or greater than 0" }),
+  minOrderQuantity: z.number().positive(),
+  minStockThreshold: z.number().min(0).default(0),
+  metrics: z.nativeEnum(MetricsEnum),
+  isHotItem: z.boolean().optional(),
+  shelfLifeDays: z.number().positive(),
+  itemType: z.nativeEnum(ItemTypeEnum),
+  image: z.string().optional(),
+});
+
+export const verifyOtpSchema = z
+  .object({
+    otp: z.string().min(1, "OTP is required"),
+    email: z.string().email().optional(),
+    phone: z.string().optional(),
+    accountType: z.string().optional(),
+  })
+  .refine((data) => data.email || data.phone, {
+    message: "Either email or phone is required",
+    path: ["email"],
+  });
+
+export const createAlokahUserSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  secret: z.string().min(1, "Secret is required"),
+});
+
+export const addSecretSchema = z.object({
+  secret: z.string().min(1, "Secret is required"),
+  type: z.nativeEnum(SecretsTypeEnum),
+});
