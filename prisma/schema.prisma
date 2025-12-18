@@ -43,12 +43,12 @@ model User {
 }
 
 model OTP {
-  id        String             @id @default(cuid())
-  otp       String
-  email     String?
-  phone     String?
-  createdAt DateTime           @default(now())
-  updatedAt DateTime           @updatedAt
+  id           String             @id @default(cuid())
+  otp          String
+  email        String?
+  phone        String?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
   userId       String?
   expiresAt    DateTime
   purpose      OtpPurposeTypeEnum @default(Login)
@@ -279,19 +279,19 @@ model Payment {
 }
 
 model AlokahUser {
-  id                 String            @id @default(cuid())
-  associateId           String?           @unique
-  phone             String?           @unique
-  lastLoginAt        DateTime          @default(now())
-  createdAt          DateTime          @default(now())
-  updatedAt          DateTime          @updatedAt
-  isActive           Boolean           @default(true)
+  id          String   @id @default(cuid())
+  associateId String?  @unique
+  phone       String?  @unique
+  lastLoginAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  isActive    Boolean  @default(true)
 
-  isPhoneVerified   Boolean           @default(false)
-  isEmailVerified   Boolean           @default(false)
+  isPhoneVerified Boolean @default(false)
+  isEmailVerified Boolean @default(false)
 
-  phoneVerifiedAt   DateTime?
-  emailVerifiedAt   DateTime?
+  phoneVerifiedAt DateTime?
+  emailVerifiedAt DateTime?
 
   email              String?           @unique
   password           String?
@@ -355,12 +355,12 @@ model AlokahOrder {
 }
 
 model Secrets {
-  id String @id @default(cuid())
-  secret String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  type SecretsTypeEnum @default(API)
-  expiresAt DateTime 
+  id        String          @id @default(cuid())
+  secret    String
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  type      SecretsTypeEnum @default(API)
+  expiresAt DateTime
 }
 
 model Metrics {
